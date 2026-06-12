@@ -1,0 +1,40 @@
+services:
+  backend:
+    # override: build locally and mount source for hot reload
+    image: 852r-panel-backend:dev
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+      target: deps
+    command: ["dumb-init", "--", "node_modules/.bin/nodemon", "start.js"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app:delegated
+      - /app/node_modules
+      - ./secrets:/app/secrets:ro
+      - db:/app/data
+      - logs:/app/logs
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: ["node_modules/.bin/vite", "--host"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+    # frontend container in dev doesn't need nginx or the nginx volume
+    # so we null out the nginx volume mount from the prod config
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+
+networks:
+  panel_net:
+    driver: bridge

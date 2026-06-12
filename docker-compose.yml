@@ -1,0 +1,50 @@
+services:
+  backend:
+    image: ghcr.io/${GHCR_OWNER}/852r-panel-backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - db:/app/data
+      - logs:/app/logs
+      - ./secrets:/app/secrets:ro
+    networks:
+      - panel_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER}/852r-panel-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_COLOR_BRONZE: ${VITE_COLOR_BRONZE}
+        VITE_COLOR_SILVER: ${VITE_COLOR_SILVER}
+        VITE_COLOR_GOLD: ${VITE_COLOR_GOLD}
+        VITE_COLOR_DIAMOND: ${VITE_COLOR_DIAMOND}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    restart: unless-stopped
+    volumes:
+      - ./nginx/panel.conf:/etc/nginx/conf.d/panel.conf:ro
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - panel_net
+
+networks:
+  panel_net:
+    driver: bridge
+
+volumes:
+  db:
+  logs:
