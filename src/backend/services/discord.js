@@ -30,20 +30,18 @@ export async function dmUser(discordId, message) {
     await member.send(message);
     logger.info(`DM sent to ${member.user.username} (${discordId})`);
   } catch (err) {
-    // User may have DMs disabled — log and continue, don't throw
     logger.warn(`Could not DM ${discordId}: ${err.message}`);
   }
 }
 
 // ── Bans ─────────────────────────────────────────────────────
 
-export async function tempBan(discordId, username, durationHrs, warningId) {
+export async function tempBan(discordId, username, durationDays, warningId) {
   const g = guild();
-  await g.members.ban(discordId, { reason: `Warning issued — ${durationHrs}h temp ban` });
-  logger.info(`Temp banned ${username} (${discordId}) for ${durationHrs}h`);
+  await g.members.ban(discordId, { reason: `Warning issued — ${durationDays}-day ban` });
+  logger.info(`Temp banned ${username} (${discordId}) for ${durationDays} day(s)`);
 
-  // Persist the scheduled unban so it survives restarts
-  const unbanAt = new Date(Date.now() + durationHrs * 60 * 60 * 1000).toISOString();
+  const unbanAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
   getDb()
     .prepare(`
       INSERT INTO scheduled_unbans (discord_id, username, unban_at, warning_id)
@@ -53,6 +51,21 @@ export async function tempBan(discordId, username, durationHrs, warningId) {
     .run(discordId, username, unbanAt, warningId);
 
   scheduleUnban(discordId, username, unbanAt);
+}
+
+// L3
+export async function indefiniteBan(discordId, username, warningId) {
+  const g = guild();
+  await g.members.ban(discordId, { reason: 'Level 3 warning — indefinite ban, appealable after 6 months' });
+  logger.info(`Indefinite ban applied to ${username} (${discordId})`);
+
+  const eligibleAt = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
+  getDb()
+    .prepare(`
+      INSERT INTO appeals (warning_id, discord_id, username, eligible_at)
+      VALUES (?, ?, ?, ?)
+    `)
+    .run(warningId, discordId, username, eligibleAt);
 }
 
 export async function permanentBan(discordId, reason) {
@@ -88,7 +101,6 @@ export function rehydrateScheduledUnbans() {
 function scheduleUnban(discordId, username, unbanAt) {
   const msUntilUnban = new Date(unbanAt).getTime() - Date.now();
   if (msUntilUnban <= 0) {
-    // Already elapsed — unban immediately
     unban(discordId);
     return;
   }

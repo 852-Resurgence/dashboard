@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS warnings (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   discord_id      TEXT    NOT NULL,
   username        TEXT    NOT NULL,               
-  level           INTEGER NOT NULL,               -- references warning_config.level
+  level           TEXT    NOT NULL,
   reason          TEXT    NOT NULL,
   issued_by_id    TEXT    NOT NULL,               -- staff discord user ID
   issued_by_name  TEXT    NOT NULL,               -- staff username

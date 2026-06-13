@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS warning_config (
-  level             INTEGER PRIMARY KEY,          -- e.g. 1, 2, 3, 4
+  level             TEXT    PRIMARY KEY,
   name              TEXT    NOT NULL,             -- e.g. 'verbal warning'
   description       TEXT    NOT NULL,
   send_dm           INTEGER NOT NULL DEFAULT 1,   -- 0/1 bool
