@@ -5,8 +5,10 @@ CREATE TABLE IF NOT EXISTS warning_config (
   send_dm           INTEGER NOT NULL DEFAULT 1,   -- 0/1 bool
   post_mod_log      INTEGER NOT NULL DEFAULT 0,
   restrict_channels INTEGER NOT NULL DEFAULT 0,   -- active_restriction_channels list
-  ban_duration_hrs  INTEGER,                      -- NULL = no ban; >0 = temp ban duration
+  ban_duration_days INTEGER,                      -- NULL = no ban; >0 = temp ban duration
+  indefinite_ban    INTEGER NOT NULL DEFAULT 0,
   permanent_ban     INTEGER NOT NULL DEFAULT 0,   -- 1 = permanent ban, overrides ban_duration_hrs
+  appeal_after_days INTEGER,
   auto_expire_days  INTEGER,                      -- NULL = never auto-expires
   created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
