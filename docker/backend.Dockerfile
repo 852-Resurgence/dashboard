@@ -1,6 +1,6 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
-COPY backend/package*.json ./
+COPY src/backend/package*.json ./
 RUN npm ci --omit=dev
 
 FROM node:22-alpine AS runner
@@ -12,7 +12,7 @@ RUN apk add --no-cache dumb-init
 RUN addgroup -S panel && adduser -S panel -G panel
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY backend/ ./
+COPY src/backend/ ./
 
 # volumes for runtime data — declared here as documentation; actual mounts in compose
 # /app/data  — SQLite database

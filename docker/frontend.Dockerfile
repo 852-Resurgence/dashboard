@@ -1,13 +1,17 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY frontend/package*.json ./
+COPY src/frontend/package*.json ./
 RUN npm ci
-COPY frontend/ ./
+COPY src/frontend/ ./
 # Vite picks up VITE_* vars at build time from the environment
-ARG VITE_COLOR_BRONZE
-ARG VITE_COLOR_SILVER
-ARG VITE_COLOR_GOLD
-ARG VITE_COLOR_DIAMOND
+ARG VITE_COLOR_STAFF
+ARG VITE_COLOR_LUMINARY
+ARG VITE_COLOR_PRESTIGE
+ARG VITE_COLOR_VICE
+ARG VITE_COLOR_SENATOR
+ARG VITE_COLOR_DIGNITARY
+ARG VITE_COLOR_ATTACHE
+ARG VITE_COLOR_CITIZEN
 ARG VITE_API_BASE_URL
 RUN npm run build
 
