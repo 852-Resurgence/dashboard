@@ -28,7 +28,6 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // Fetch session on first navigation if not yet resolved
   if (auth.loading) await auth.fetchMe()
 
   if (!to.meta.public && !auth.isAuthenticated) {
