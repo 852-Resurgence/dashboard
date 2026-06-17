@@ -20,13 +20,21 @@ const PINNED_MEMBER_ID = '319761776659136524';
 
 router.use(authMiddleware);
 
-// GET /api/members
+// GET /api/members — ?summary=1 omits aliases/notes text (faster list load)
 router.get('/api/members', (req, res) => {
-  const { search, rank } = req.query;
+  const { search, rank, summary } = req.query;
+  const listOnly = summary === '1' || summary === 'true';
+
+  const memberCols = listOnly
+    ? `m.discord_id, m.username, m.display_name, m.joined_at, m.rank,
+       m.current_warning_id, m.prior_warnings, m.active_restrictions,
+       CASE WHEN COALESCE(m.aliases, '') != '' THEN 1 ELSE 0 END AS has_aliases,
+       CASE WHEN COALESCE(m.notes, '') != '' THEN 1 ELSE 0 END AS has_notes`
+    : 'm.*';
 
   let query = `
     SELECT
-      m.*,
+      ${memberCols},
       ml.level                                    AS arcane_level,
       w.level                                     AS current_warning_level,
       GROUP_CONCAT(pw.level ORDER BY pw.issued_at) AS prior_warning_levels
@@ -65,11 +73,18 @@ router.get('/api/members', (req, res) => {
   res.json(members);
 });
 
-// GET /api/members/:discordId
+// GET /api/members/:discordId — full record including aliases/notes
 router.get('/api/members/:discordId', (req, res) => {
-  const member = getDb()
-    .prepare('SELECT * FROM members WHERE discord_id = ?')
-    .get(req.params.discordId);
+  const member = getDb().prepare(`
+    SELECT
+      m.*,
+      ml.level AS arcane_level,
+      w.level  AS current_warning_level
+    FROM members m
+    LEFT JOIN member_levels ml ON m.discord_id = ml.discord_id
+    LEFT JOIN warnings w ON m.current_warning_id = w.id
+    WHERE m.discord_id = ?
+  `).get(req.params.discordId);
   if (!member) return res.status(404).json({ error: 'Member not found' });
   res.json(member);
 });
