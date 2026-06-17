@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import client from '@/api/client'
+import { reportDebug } from '@/api/debugReport'
 
 import Login     from '@/pages/Login.vue'
 import Setup     from '@/pages/Setup.vue'
@@ -44,7 +45,20 @@ router.beforeEach(async (to) => {
 
   if (auth.loading) await auth.fetchMe()
 
+  // #region agent log
+  reportDebug('router:beforeEach', 'navigation guard', {
+    to: to.path,
+    query: to.fullPath.includes('?') ? to.fullPath.split('?')[1] : '',
+    isAuthenticated: auth.isAuthenticated,
+    isAdmin: auth.isAdmin,
+    role: auth.user?.role ?? null,
+  }, 'H5')
+  // #endregion
+
   if (!to.meta.public && !auth.isAuthenticated) {
+    // #region agent log
+    reportDebug('router:redirect', 'unauthenticated -> login', { to: to.path }, 'H5')
+    // #endregion
     return { path: '/login' }
   }
 

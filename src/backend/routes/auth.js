@@ -4,6 +4,7 @@ import axios from 'axios';
 import { resolvePermission } from '../services/discord.js';
 import logger from '../logger.js';
 import env from '../config/env.js';
+import { debugLog } from '../debugLog.js';
 
 const router = Router();
 
@@ -25,6 +26,14 @@ router.get('/auth/discord', (req, res) => {
 // redirect back with code
 router.get('/auth/callback', async (req, res) => {
   const { code } = req.query;
+  // #region agent log
+  debugLog('auth.js:callback:entry', 'OAuth callback hit', {
+    hasCode: !!code,
+    redirectUri: env.discord.redirectUri,
+    cookieDomain: env.auth.cookieDomain,
+    nodeEnv: env.nodeEnv,
+  }, 'H1');
+  // #endregion
   if (!code) return res.status(400).json({ error: 'Missing code' });
 
   try {
@@ -57,8 +66,19 @@ router.get('/auth/callback', async (req, res) => {
 
     // resolve permission level
     const role = resolvePermission(roleIds);
+    // #region agent log
+    debugLog('auth.js:callback:roles', 'Discord roles resolved', {
+      roleCount: roleIds.length,
+      resolvedRole: role ?? null,
+      adminRoleConfigured: !!env.discord.roles.admin,
+      modRoleConfigured: !!env.discord.roles.mod,
+    }, 'H1');
+    // #endregion
     if (!role) {
       logger.warn(`Unauthorised login attempt by ${username} (${id})`);
+      // #region agent log
+      debugLog('auth.js:callback:denied', 'No matching admin/mod role', { username }, 'H1');
+      // #endregion
       return res.redirect('/?error=unauthorised');
     }
 
@@ -77,9 +97,22 @@ router.get('/auth/callback', async (req, res) => {
     });
 
     logger.info(`${username} (${id}) logged in as ${role}`);
+    // #region agent log
+    debugLog('auth.js:callback:success', 'Cookie set, redirecting to /', {
+      role,
+      secureCookie: env.nodeEnv === 'production',
+      cookieDomain: env.auth.cookieDomain,
+    }, 'H2');
+    // #endregion
     res.redirect('/');
   } catch (err) {
     logger.error(`Auth callback error: ${err.message}`);
+    // #region agent log
+    debugLog('auth.js:callback:error', 'OAuth callback failed', {
+      error: err.message,
+      status: err.response?.status ?? null,
+    }, 'H1');
+    // #endregion
     res.redirect('/?error=auth_failed');
   }
 });
@@ -97,18 +130,37 @@ router.post('/auth/logout', (req, res) => {
 // frontend validity endpoint
 router.get('/auth/me', (req, res) => {
   const token = req.cookies?.token;
+  // #region agent log
+  debugLog('auth.js:me', '/auth/me request', {
+    hasToken: !!token,
+    cookieKeys: Object.keys(req.cookies ?? {}),
+  }, 'H3');
+  // #endregion
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     const payload = jwt.verify(token, env.auth.jwtSecret);
+    // #region agent log
+    debugLog('auth.js:me:ok', 'JWT verified', { role: payload.role }, 'H3');
+    // #endregion
     res.json({
       userId:   payload.userId,
       username: payload.username,
       role:     payload.role,
     });
-  } catch {
+  } catch (err) {
+    // #region agent log
+    debugLog('auth.js:me:fail', 'JWT verify failed', { error: err.message }, 'H3');
+    // #endregion
     res.status(401).json({ error: 'Invalid or expired session' });
   }
+});
+
+// Client-side debug reports (no secrets)
+router.post('/auth/debug-client', (req, res) => {
+  const { location, message, data, hypothesisId } = req.body ?? {};
+  debugLog(location || 'client', message || 'client report', data || {}, hypothesisId || 'H5');
+  res.json({ ok: true });
 });
 
 export default router;

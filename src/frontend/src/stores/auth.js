@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import client from '@/api/client'
+import { reportDebug } from '@/api/debugReport'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)   // { userId, username, role }
@@ -14,8 +15,22 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await client.get('/auth/me')
       user.value = res.data
-    } catch {
+      // #region agent log
+      reportDebug('auth.js:fetchMe:ok', 'fetchMe succeeded', {
+        role: res.data.role,
+        path: window.location.pathname,
+        query: window.location.search,
+      }, 'H5')
+      // #endregion
+    } catch (err) {
       user.value = null
+      // #region agent log
+      reportDebug('auth.js:fetchMe:fail', 'fetchMe failed', {
+        status: err.response?.status ?? null,
+        path: window.location.pathname,
+        query: window.location.search,
+      }, 'H3')
+      // #endregion
     } finally {
       loading.value = false
     }
