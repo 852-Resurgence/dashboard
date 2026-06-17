@@ -10,8 +10,8 @@ services:
       DB_PATH: /app/data/panel.db
       LOG_DIR: /app/logs
     volumes:
-      - db:/app/data
-      - logs:/app/logs
+      - ./data:/app/data
+      - ./logs:/app/logs
       - ./secrets:/app/secrets:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -44,7 +44,7 @@ services:
     volumes:
       - ./nginx/panel.conf:/etc/nginx/conf.d/panel.conf:ro
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8083:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -54,7 +54,3 @@ services:
 networks:
   panel_net:
     driver: bridge
-
-volumes:
-  db:
-  logs:

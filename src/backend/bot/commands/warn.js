@@ -11,15 +11,15 @@ export const data = new SlashCommandBuilder()
   .addUserOption(opt =>
     opt.setName('member').setDescription('The member to warn').setRequired(true)
   )
-  .addIntegerOption(opt =>
+  .addStringOption(opt =>
     opt.setName('level').setDescription('Warning level').setRequired(true)
       .addChoices(
-        { name: '0 — Informal warning',       value: '0' },
-        { name: '1 — Formal warning',         value: '1' },
-        { name: '2 - 14-day ban',             value: '2A'},
-        { name: '3 - 30-day ban',             value: '2B'},
-        { name: '3 — Indefinite ban',         value: '3' },
-        { name: '4 — Permanent ban',          value: '4' },
+        { name: '0 — Informal warning',  value: '0' },
+        { name: '1 — Formal warning',    value: '1' },
+        { name: '2A — 14-day ban',       value: '2A' },
+        { name: '2B — 30-day ban',       value: '2B' },
+        { name: '3 — Indefinite ban',    value: '3' },
+        { name: '4 — Permanent ban',     value: '4' },
       )
   )
   .addStringOption(opt =>

@@ -52,7 +52,7 @@ cd src/frontend && npm install && npm run dev
 docker compose up -d
 ```
 
-The panel is served at http://127.0.0.1:8080 with nginx proxying `/api`, `/auth`, and `/health` to the backend container.
+All persistent files live under **`/mnt/data/852r-panel`** (see [deploy/MIGRATE-TO-MNT-DATA.md](deploy/MIGRATE-TO-MNT-DATA.md)).
 
 ## Environment
 

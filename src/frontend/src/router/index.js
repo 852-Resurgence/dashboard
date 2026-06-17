@@ -32,7 +32,9 @@ async function fetchSetupStatus() {
   try {
     const res = await client.get('/api/config/setup-status')
     return res.data
-  } catch {
+  } catch (err) {
+    // Don't treat auth failures as "setup complete" — avoids redirect loops
+    if (err.response?.status === 401) return { complete: false }
     return { complete: true }
   }
 }

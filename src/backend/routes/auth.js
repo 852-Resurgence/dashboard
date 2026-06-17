@@ -86,7 +86,11 @@ router.get('/auth/callback', async (req, res) => {
 
 // sign out
 router.post('/auth/logout', (req, res) => {
-  res.clearCookie('token', { domain: env.auth.cookieDomain });
+  res.clearCookie('token', {
+    domain: env.auth.cookieDomain,
+    secure: env.nodeEnv === 'production',
+    sameSite: 'lax',
+  });
   res.json({ ok: true });
 });
 

@@ -2,17 +2,12 @@ import axios from 'axios'
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  withCredentials: true, 
+  withCredentials: true,
 })
 
 client.interceptors.response.use(
   res => res,
-  err => {
-    if (err.response?.status === 401) {
-      window.location.href = '/login'
-    }
-    return Promise.reject(err)
-  }
+  err => Promise.reject(err)
 )
 
 export default client
