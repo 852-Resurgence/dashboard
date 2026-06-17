@@ -7,7 +7,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 # proper signal handling save me
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init wget
 
 RUN addgroup -S panel && adduser -S panel -G panel
 

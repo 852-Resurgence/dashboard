@@ -17,9 +17,6 @@ import configRouter   from './routes/config.js';
 
 async function main() {
   initDb();
-  await startBot();
-  connectConsoleWS();
-  startWeeklySync();
 
   const app = express();
 
@@ -53,9 +50,12 @@ async function main() {
     res.status(500).json({ error: 'Internal server error' });
   });
 
-  app.listen(env.port, () => {
-    logger.info(`Express listening on port ${env.port}`);
-  });
+  await new Promise(resolve => app.listen(env.port, resolve));
+  logger.info(`Express listening on port ${env.port}`);
+
+  await startBot();
+  connectConsoleWS();
+  startWeeklySync();
 }
 
 main().catch(err => {

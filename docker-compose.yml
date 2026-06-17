@@ -6,6 +6,9 @@ services:
       dockerfile: docker/backend.Dockerfile
     restart: unless-stopped
     env_file: .env
+    environment:
+      DB_PATH: /app/data/panel.db
+      LOG_DIR: /app/logs
     volumes:
       - db:/app/data
       - logs:/app/logs
@@ -19,7 +22,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 60s
 
   frontend:
     image: ghcr.io/${GHCR_OWNER}/852r-panel-frontend:${IMAGE_TAG:-latest}

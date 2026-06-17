@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import logger from '../logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.DB_PATH || join(__dirname, '../../../data/panel.db');
+const DB_PATH = process.env.DB_PATH || join(__dirname, '../../data/panel.db');
 
 let db;
 

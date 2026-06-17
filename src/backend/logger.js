@@ -1,29 +1,29 @@
 import winston from 'winston';
+import Transport from 'winston-transport';
+import { mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOG_DIR = process.env.LOG_DIR || join(__dirname, '../../logs');
+const LOG_DIR = process.env.LOG_DIR || join(__dirname, '../logs');
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 
 const RING_SIZE = 500;
 const ring = [];
 
-const ringTransport = new winston.transports.Stream({
-  stream: {
-    write(chunk) {
-      try {
-        const entry = JSON.parse(chunk);
-        ring.push({
-          ts: entry.timestamp,
-          level: entry.level,
-          message: entry.message,
-        });
-        if (ring.length > RING_SIZE) ring.shift();
-      } catch { /* ignore malformed lines */ }
-    },
-  },
-});
+class RingBufferTransport extends Transport {
+  log(info, callback) {
+    ring.push({
+      ts: info.timestamp,
+      level: info.level,
+      message: info.message,
+    });
+    if (ring.length > RING_SIZE) ring.shift();
+    callback();
+  }
+}
+
+mkdirSync(LOG_DIR, { recursive: true });
 
 const logger = winston.createLogger({
   level: LOG_LEVEL,
@@ -43,18 +43,16 @@ const logger = winston.createLogger({
         )
       ),
     }),
-    // rotating files
     new winston.transports.File({
       filename: join(LOG_DIR, 'panel.log'),
-      maxsize: 10 * 1024 * 1024, // 10 MB per file
+      maxsize: 10 * 1024 * 1024,
       maxFiles: 14,
       tailable: true,
     }),
-    ringTransport,
+    new RingBufferTransport(),
   ],
 });
 
-// expose ring buffer for the /api/logs endpoint
 export function getLogRing() {
   return [...ring];
 }
