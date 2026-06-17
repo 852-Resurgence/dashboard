@@ -10,6 +10,8 @@ services:
       - db:/app/data
       - logs:/app/logs
       - ./secrets:/app/secrets:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - panel_net
     healthcheck:

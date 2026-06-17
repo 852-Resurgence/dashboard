@@ -1,0 +1,8 @@
+# Production overrides for VPS deploy (Linux + Crafty on same host).
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
