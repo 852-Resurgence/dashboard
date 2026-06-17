@@ -93,21 +93,25 @@ router.patch('/api/members/:discordId', requireRole('mod'), async (req, res) => 
   const nextAliases = aliases !== null ? aliases : (current.aliases ?? '');
   const nextNotes   = notes   !== null ? notes   : (current.notes ?? '');
 
-  try {
-    const { updateMemberHumanFields } = await import('../services/sheets.js');
-    await updateMemberHumanFields(discordId, nextAliases, nextNotes);
-  } catch (err) {
-    logger.error(`Failed to update Sheets for ${discordId}: ${err.message}`);
-    return res.status(502).json({ error: err.message });
-  }
-
   db.prepare(`
     UPDATE members SET aliases = ?, notes = ? WHERE discord_id = ?
   `).run(nextAliases, nextNotes, discordId);
 
   const updated = db.prepare('SELECT * FROM members WHERE discord_id = ?').get(discordId);
+
+  let sheetsSynced = false;
+  let sheetsError = null;
+  try {
+    const { updateMemberHumanFields } = await import('../services/sheets.js');
+    await updateMemberHumanFields(discordId, nextAliases, nextNotes);
+    sheetsSynced = true;
+  } catch (err) {
+    sheetsError = err.message;
+    logger.error(`Failed to update Sheets for ${discordId}: ${err.message}`);
+  }
+
   logger.info(`Member ${discordId} aliases/notes updated by ${req.user.username}`);
-  res.json(updated);
+  res.json({ ...updated, sheets_synced: sheetsSynced, sheets_error: sheetsError });
 });
 
 // POST /api/members/sync

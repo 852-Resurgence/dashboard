@@ -15,8 +15,11 @@ router.get('/api/warnings', (req, res) => {
   const expired = req.query.expired === 'true' ? 1 : 0;
   const warnings = getDb()
     .prepare(`
-      SELECT w.*, prev.level AS escalated_from_level
+      SELECT w.*,
+             m.display_name AS member_display_name,
+             prev.level AS escalated_from_level
       FROM warnings w
+      LEFT JOIN members m ON m.discord_id = w.discord_id
       LEFT JOIN warnings prev ON w.escalated_from = prev.id
       WHERE w.expired = ?
       ORDER BY w.issued_at DESC

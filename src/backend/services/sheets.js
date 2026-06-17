@@ -60,11 +60,47 @@ async function processQueue() {
 }
 
 // ── Column layout constants ───────────────────────────────────
-// Bot-owned: A–I  (row_id, discord_id, username, joined_at, rank, level,
+// Bot-owned: A–J  (row_id, discord_id, username, display_name, joined_at, rank, level,
 //                  current_warning, prior_warnings, active_restrictions)
-// Human-owned: J–K (aliases, notes) — never written by bot
-const MEMBER_BOT_RANGE   = 'Members_Data!A:I';
-const MEMBER_HUMAN_RANGE = 'Members_Data!J:K';  
+// Human-owned: aliases + notes (legacy J–K or current K–L) — never written by bot
+const MEMBER_BOT_RANGE = 'Members_Data!A:J';
+
+function columnLetter(index) {
+  let n = index + 1;
+  let s = '';
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+/** Locate aliases/notes columns from row 1 headers (supports old J–K and new K–L layouts). */
+async function resolveHumanColumns(sheets) {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.sheets.membersId,
+    range: 'Members_Data!1:1',
+  });
+  const headers = (res.data.values?.[0] || []).map(h => String(h).trim().toLowerCase());
+
+  let aliasesIdx = headers.indexOf('aliases');
+  let notesIdx = headers.indexOf('notes');
+
+  if (aliasesIdx === -1) aliasesIdx = headers.includes('display_name') ? 10 : 9;
+  if (notesIdx === -1) notesIdx = aliasesIdx + 1;
+
+  const aliasesCol = columnLetter(aliasesIdx);
+  const notesCol = columnLetter(notesIdx);
+
+  return {
+    aliasesIdx,
+    notesIdx,
+    aliasesCol,
+    notesCol,
+    readRange: `Members_Data!${aliasesCol}:${notesCol}`,
+  };
+}
 const WARNINGS_RANGE     = 'Warnings_Data!A:J';
 
 // ── Warnings ──────────────────────────────────────────────────
@@ -154,10 +190,11 @@ export async function updateWarningRow(warning) {
 export async function syncMembers(members) {
   return withLock('sync_members', async () => {
     const sheets = await getSheetsClient();
+    const humanCols = await resolveHumanColumns(sheets);
 
     const humanData = await sheets.spreadsheets.values.get({
       spreadsheetId: env.sheets.membersId,
-      range: MEMBER_HUMAN_RANGE,
+      range: humanCols.readRange,
     });
     const humanRows = humanData.data.values || [];
 
@@ -177,11 +214,12 @@ export async function syncMembers(members) {
       }
     });
 
-    const header = [['row_id','discord_id','username','joined_at','rank','level',
+    const header = [['row_id','discord_id','username','display_name','joined_at','rank','level',
                       'current_warning','prior_warnings','active_restrictions']];
     const rows = members.map((m, i) => [
       i + 2,
       m.discord_id,
+      m.username,
       m.display_name || m.username,
       m.joined_at || '',
       m.rank || '',
@@ -198,15 +236,16 @@ export async function syncMembers(members) {
       requestBody: { values: [...header, ...rows] },
     });
 
-    logger.info(`Members_Data synced — ${members.length} rows written (columns A–I only)`);
+    logger.info(`Members_Data synced — ${members.length} rows written (columns A–J only)`);
     return humanByDiscordId;
   });
 }
 
-/** Update human-owned columns J–K for one member row. */
+/** Update human-owned columns K–L for one member row. */
 export async function updateMemberHumanFields(discordId, aliases, notes) {
   return withLock('update_member_human', async () => {
     const sheets = await getSheetsClient();
+    const humanCols = await resolveHumanColumns(sheets);
 
     const idCol = await sheets.spreadsheets.values.get({
       spreadsheetId: env.sheets.membersId,
@@ -224,19 +263,21 @@ export async function updateMemberHumanFields(discordId, aliases, notes) {
       throw new Error('Member not found in Sheets — run a member sync first');
     }
 
+    const { aliasesCol, notesCol } = humanCols;
     await sheets.spreadsheets.values.update({
       spreadsheetId: env.sheets.membersId,
-      range: `Members_Data!J${rowIndex}:K${rowIndex}`,
+      range: `Members_Data!${aliasesCol}${rowIndex}:${notesCol}${rowIndex}`,
       valueInputOption: 'RAW',
       requestBody: { values: [[aliases ?? '', notes ?? '']] },
     });
 
-    logger.info(`Members_Data human columns updated for ${discordId} (row ${rowIndex})`);
+    logger.info(`Members_Data human columns updated for ${discordId} (row ${rowIndex}, ${aliasesCol}:${notesCol})`);
   });
 }
 
 export async function getHumanColumns() {
   const sheets = await getSheetsClient();
+  const humanCols = await resolveHumanColumns(sheets);
 
   const [ids, human] = await Promise.all([
     sheets.spreadsheets.values.get({
@@ -245,7 +286,7 @@ export async function getHumanColumns() {
     }),
     sheets.spreadsheets.values.get({
       spreadsheetId: env.sheets.membersId,
-      range: MEMBER_HUMAN_RANGE,
+      range: humanCols.readRange,
     }),
   ]);
 

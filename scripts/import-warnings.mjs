@@ -391,7 +391,7 @@ async function applyWarning(row, member, panelLevel, issuedAt, expiresAt, expire
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     member.discord_id,
-    memberLabel(member),
+    member.username,
     panelLevel,
     reason,
     LEGACY_ISSUER_ID,

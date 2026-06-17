@@ -22,6 +22,11 @@
 
     <div v-if="saveError" class="save-error">{{ saveError }}</div>
 
+    <div class="edit-hint">
+      <i class="ti ti-pencil" />
+      Aliases and notes are editable below — scroll right if you don’t see those columns. Changes save when you click away.
+    </div>
+
     <div class="card">
       <div class="card-header">
         <div style="display:flex;align-items:center;gap:10px">
@@ -42,17 +47,23 @@
       <div v-if="loading" class="empty">Loading members…</div>
       <div v-else-if="!members.length" class="empty">No members found.</div>
 
-      <table v-else class="data-table">
+      <div v-else class="table-scroll">
+      <table class="data-table members-table">
         <thead>
           <tr>
-            <th style="width:16%">Display name</th>
-            <th style="width:9%">Joined</th>
-            <th style="width:12%">Rank / level</th>
-            <th style="width:9%">Warning</th>
-            <th style="width:16%">Prior warnings</th>
-            <th style="width:12%">Restrictions</th>
-            <th style="width:14%">Aliases</th>
-            <th style="width:12%">Notes</th>
+            <th style="width:14%">Display name</th>
+            <th style="width:12%">Discord tag</th>
+            <th style="width:8%">Joined</th>
+            <th style="width:11%">Rank / level</th>
+            <th style="width:8%">Warning</th>
+            <th style="width:14%">Prior warnings</th>
+            <th style="width:11%">Restrictions</th>
+            <th style="width:12%">
+              <span class="editable-col"><i class="ti ti-pencil" /> Aliases</span>
+            </th>
+            <th style="width:10%">
+              <span class="editable-col"><i class="ti ti-pencil" /> Notes</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -64,17 +75,12 @@
             <td>
               <div class="member-chip">
                 <div class="member-avatar" :style="rankAvatarStyle(m.rank)">
-                  {{ initials(memberLabel(m)) }}
+                  {{ avatarInitials(m) }}
                 </div>
-                <div class="member-names">
-                  <span class="member-display">{{ memberLabel(m) }}</span>
-                  <span
-                    v-if="m.username && memberLabel(m) !== m.username"
-                    class="member-handle text-tertiary"
-                  >@{{ m.username }}</span>
-                </div>
+                <span class="member-display">{{ displayName(m) }}</span>
               </div>
             </td>
+            <td class="member-handle text-tertiary">@{{ m.username || '—' }}</td>
             <td class="text-tertiary">{{ fmt(m.joined_at) }}</td>
             <td><RankBadge :rank="m.rank" :level="m.arcane_level" /></td>
             <td><WarnBadge :level="m.current_warning_level" /></td>
@@ -94,59 +100,46 @@
               </span>
               <span v-else class="text-tertiary">—</span>
             </td>
-            <td>
+            <td class="editable-cell">
               <input
-                v-if="canEdit"
                 v-model="m.aliases"
                 type="text"
                 class="cell-input"
-                placeholder="—"
+                placeholder="Add aliases…"
                 :disabled="savingId === m.discord_id"
-                @focus="rememberDraft(m)"
                 @blur="saveMember(m)"
                 @keydown.enter="$event.target.blur()"
               />
-              <span v-else class="text-secondary cell-readonly">{{ m.aliases || '—' }}</span>
             </td>
-            <td>
-              <input
-                v-if="canEdit"
+            <td class="editable-cell">
+              <textarea
                 v-model="m.notes"
-                type="text"
-                class="cell-input"
-                placeholder="—"
+                class="cell-input cell-textarea"
+                placeholder="Add notes…"
+                rows="2"
                 :disabled="savingId === m.discord_id"
-                @focus="rememberDraft(m)"
                 @blur="saveMember(m)"
-                @keydown.enter="$event.target.blur()"
               />
-              <span v-else class="text-secondary cell-readonly" :title="m.notes || undefined">
-                {{ m.notes || '—' }}
-              </span>
             </td>
           </tr>
         </tbody>
       </table>
+      </div>
 
       <div style="font-size:10px;color:var(--text-tertiary);margin-top:12px">
         Rank inferred from Discord roles. Level sourced from Arcane level-up announcements.
-        <template v-if="canEdit">Aliases and notes save on blur and sync to Google Sheets.</template>
-        <template v-else>Aliases and notes are view-only.</template>
+        Click aliases or notes to edit — saves when you click away. Syncs to Google Sheets.
       </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import RankBadge from '@/components/RankBadge.vue'
 import WarnBadge from '@/components/WarnBadge.vue'
 import client from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
-
-const auth = useAuthStore()
-const canEdit = computed(() => auth.isMod)
 
 const RANKS = ['staff','luminary','prestige','vice','senator','dignitary','attache','citizen']
 
@@ -170,7 +163,7 @@ const search     = ref('')
 const totalCount = ref(0)
 const lastSynced = ref('—')
 const sheetsUrl  = ref('https://sheets.google.com')
-const drafts     = ref({})
+const lastSaved  = ref({})
 
 let searchTimer = null
 
@@ -187,6 +180,12 @@ async function loadMembers(q = '') {
       aliases: row.aliases ?? '',
       notes: row.notes ?? '',
     }))
+    for (const row of members.value) {
+      lastSaved.value[row.discord_id] = {
+        aliases: row.aliases ?? '',
+        notes: row.notes ?? '',
+      }
+    }
     if (!q) totalCount.value = res.data.length
   } finally {
     loading.value = false
@@ -207,24 +206,11 @@ async function loadSheetsUrl() {
   } catch { /* use fallback */ }
 }
 
-function rememberDraft(member) {
-  drafts.value[member.discord_id] = {
-    aliases: member.aliases ?? '',
-    notes: member.notes ?? '',
-  }
-  saveError.value = ''
-}
-
 async function saveMember(member) {
-  const draft = drafts.value[member.discord_id]
-  if (!draft) return
-
+  const saved = lastSaved.value[member.discord_id] ?? { aliases: '', notes: '' }
   const aliases = member.aliases ?? ''
   const notes = member.notes ?? ''
-  if (aliases === draft.aliases && notes === draft.notes) {
-    delete drafts.value[member.discord_id]
-    return
-  }
+  if (aliases === saved.aliases && notes === saved.notes) return
 
   savingId.value = member.discord_id
   saveError.value = ''
@@ -232,12 +218,17 @@ async function saveMember(member) {
     const res = await client.patch(`/api/members/${member.discord_id}`, { aliases, notes })
     member.aliases = res.data.aliases ?? ''
     member.notes = res.data.notes ?? ''
+    lastSaved.value[member.discord_id] = { aliases: member.aliases, notes: member.notes }
+    if (res.data.sheets_synced === false) {
+      saveError.value = res.data.sheets_error
+        ? `Saved in panel, but Google Sheets sync failed: ${res.data.sheets_error}`
+        : 'Saved in panel, but Google Sheets sync failed.'
+    }
   } catch (err) {
-    member.aliases = draft.aliases
-    member.notes = draft.notes
+    member.aliases = saved.aliases
+    member.notes = saved.notes
     saveError.value = err.response?.data?.error || 'Failed to save aliases/notes'
   } finally {
-    delete drafts.value[member.discord_id]
     savingId.value = null
   }
 }
@@ -276,8 +267,14 @@ function rankAvatarStyle(rank) {
 
 function initials(name = '') { return name.slice(0, 2).toUpperCase() }
 
-function memberLabel(member) {
-  return member.display_name || member.username || '—'
+function displayName(member) {
+  const name = member.display_name?.trim()
+  return name || '—'
+}
+
+function avatarInitials(member) {
+  const name = member.display_name?.trim() || member.username?.trim()
+  return initials(name)
 }
 
 function fmt(iso) {
@@ -304,6 +301,35 @@ function parseRestrictions(str) {
 <style scoped>
 .empty { font-size: 12px; color: var(--text-tertiary); padding: 12px 0; }
 
+.edit-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: rgba(143, 199, 200, 0.08);
+  border: 1px solid rgba(143, 199, 200, 0.22);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.edit-hint i {
+  color: var(--accent);
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+}
+
+.members-table {
+  min-width: 1100px;
+}
+
 .save-error {
   font-size: 12px;
   color: var(--text-danger);
@@ -316,9 +342,44 @@ function parseRestrictions(str) {
 
 .cell-input {
   width: 100%;
-  padding: 4px 6px;
+  padding: 6px 8px;
   font-size: 11px;
   min-width: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.cell-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.cell-input:disabled {
+  opacity: 0.6;
+}
+
+.cell-textarea {
+  min-height: 44px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.editable-col {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.editable-col i {
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.editable-cell {
+  vertical-align: top;
+  min-width: 100px;
 }
 
 .cell-readonly {
@@ -329,13 +390,6 @@ function parseRestrictions(str) {
   white-space: nowrap;
 }
 
-.member-names {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
 .member-display {
   font-size: 13px;
   overflow: hidden;
@@ -344,7 +398,7 @@ function parseRestrictions(str) {
 }
 
 .member-handle {
-  font-size: 10px;
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

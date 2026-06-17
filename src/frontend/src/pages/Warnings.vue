@@ -187,8 +187,9 @@ const WarningsTable = {
     <table v-else class="data-table">
       <thead>
         <tr>
-          <th style="width:22%">Member</th>
-          <th style="width:9%">Level</th>
+          <th style="width:18%">Display name</th>
+          <th style="width:12%">Discord tag</th>
+          <th style="width:7%">Level</th>
           <th style="width:32%">Reason</th>
           <th style="width:16%">Issued by</th>
           <th style="width:11%">Date</th>
@@ -199,10 +200,11 @@ const WarningsTable = {
         <tr v-for="w in props.rows" :key="w.id">
           <td>
             <div class="member-chip">
-              <div class="member-avatar">{{ initials(w.username) }}</div>
-              {{ w.username }}
+              <div class="member-avatar">{{ initials(w.member_display_name || w.username) }}</div>
+              <span class="member-display">{{ w.member_display_name?.trim() || '—' }}</span>
             </div>
           </td>
+          <td class="member-handle text-tertiary">@{{ w.username || '—' }}</td>
           <td><WarnBadge :level="w.level" /></td>
           <td class="text-secondary" style="white-space:normal;line-height:1.4">{{ w.reason }}</td>
           <td class="text-tertiary">{{ w.issued_by_name }}</td>
@@ -219,3 +221,16 @@ const WarningsTable = {
   `,
 }
 </script>
+
+<style scoped>
+.member-handle {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-display {
+  font-size: 13px;
+}
+</style>
