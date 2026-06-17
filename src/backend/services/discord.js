@@ -157,7 +157,20 @@ export async function postModLog(embed) {
 export function resolvePermission(roleIds) {
   if (roleIds.includes(env.discord.roles.admin)) return 'admin';
   if (roleIds.includes(env.discord.roles.mod))   return 'mod';
-  return null;
+
+  // Also honour role mappings configured via the panel setup UI
+  try {
+    const rows = getDb().prepare('SELECT role_id, permission FROM role_permissions').all();
+    let modMatch = null;
+    for (const row of rows) {
+      if (!roleIds.includes(row.role_id)) continue;
+      if (row.permission === 'admin') return 'admin';
+      if (row.permission === 'mod') modMatch = 'mod';
+    }
+    return modMatch;
+  } catch {
+    return null;
+  }
 }
 
 // Returns the rank name for a given set of Discord role IDs

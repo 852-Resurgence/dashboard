@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import { getDb } from '../db/client.js';
 import { resolvePermission } from '../services/discord.js';
 import logger from '../logger.js';
 import env from '../config/env.js';
@@ -72,6 +73,7 @@ router.get('/auth/callback', async (req, res) => {
       resolvedRole: role ?? null,
       adminRoleConfigured: !!env.discord.roles.admin,
       modRoleConfigured: !!env.discord.roles.mod,
+      dbRoleMappings: getDb().prepare('SELECT COUNT(*) AS n FROM role_permissions').get().n,
     }, 'H1');
     // #endregion
     if (!role) {
@@ -79,7 +81,7 @@ router.get('/auth/callback', async (req, res) => {
       // #region agent log
       debugLog('auth.js:callback:denied', 'No matching admin/mod role', { username }, 'H1');
       // #endregion
-      return res.redirect('/?error=unauthorised');
+      return res.redirect('/login?error=unauthorised');
     }
 
     const token = jwt.sign(
@@ -113,7 +115,7 @@ router.get('/auth/callback', async (req, res) => {
       status: err.response?.status ?? null,
     }, 'H1');
     // #endregion
-    res.redirect('/?error=auth_failed');
+    res.redirect('/login?error=auth_failed');
   }
 });
 
