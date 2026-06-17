@@ -13,12 +13,15 @@ RUN addgroup -S panel && adduser -S panel -G panel
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY src/backend/ ./
+COPY scripts/import-member-aliases.mjs ./scripts/import-member-aliases.mjs
+COPY scripts/import-warnings.mjs ./scripts/import-warnings.mjs
 
 # volumes for runtime data — declared here as documentation; actual mounts in compose
 # /app/data  — SQLite database
 # /app/logs  — Winston log files
 # /app/secrets — Google service account key (bind-mounted from host)
-RUN mkdir -p data logs secrets && chown -R panel:panel /app
+# /app/import — one-off CSV imports (bind-mounted from host)
+RUN mkdir -p data logs secrets scripts import && chown -R panel:panel /app
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

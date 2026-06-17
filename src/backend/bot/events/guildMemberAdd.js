@@ -1,5 +1,5 @@
 import { getDb } from '../../db/client.js';
-import { resolveRank, dmUser } from '../../services/discord.js';
+import { resolveRank, dmUser, memberDisplayName } from '../../services/discord.js';
 import { getLevel } from '../../services/levels.js';
 import logger from '../../logger.js';
 
@@ -10,10 +10,11 @@ export default async function guildMemberAdd(member) {
 
   getDb()
     .prepare(`
-      INSERT INTO members (discord_id, username, joined_at, rank, level, last_synced_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      INSERT INTO members (discord_id, username, display_name, joined_at, rank, level, last_synced_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(discord_id) DO UPDATE SET
         username       = excluded.username,
+        display_name   = excluded.display_name,
         joined_at      = excluded.joined_at,
         rank           = excluded.rank,
         level          = excluded.level,
@@ -22,6 +23,7 @@ export default async function guildMemberAdd(member) {
     .run(
       member.id,
       member.user.username,
+      memberDisplayName(member),
       member.joinedAt?.toISOString() ?? null,
       rank,
       level

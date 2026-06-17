@@ -13,6 +13,7 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./secrets:/app/secrets
+      - ./import:/app/import:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

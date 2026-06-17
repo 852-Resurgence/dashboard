@@ -190,3 +190,8 @@ export function resolveRank(roleIds) {
   }
   return null;
 }
+
+/** Server nickname, else Discord display name, else username handle. */
+export function memberDisplayName(member) {
+  return member.displayName || member.user.globalName || member.user.username;
+}

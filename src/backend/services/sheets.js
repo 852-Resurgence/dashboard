@@ -203,6 +203,38 @@ export async function syncMembers(members) {
   });
 }
 
+/** Update human-owned columns J–K for one member row. */
+export async function updateMemberHumanFields(discordId, aliases, notes) {
+  return withLock('update_member_human', async () => {
+    const sheets = await getSheetsClient();
+
+    const idCol = await sheets.spreadsheets.values.get({
+      spreadsheetId: env.sheets.membersId,
+      range: 'Members_Data!B:B',
+    });
+    const rows = idCol.data.values || [];
+    let rowIndex = -1;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === discordId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+    if (rowIndex === -1) {
+      throw new Error('Member not found in Sheets — run a member sync first');
+    }
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: env.sheets.membersId,
+      range: `Members_Data!J${rowIndex}:K${rowIndex}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[aliases ?? '', notes ?? '']] },
+    });
+
+    logger.info(`Members_Data human columns updated for ${discordId} (row ${rowIndex})`);
+  });
+}
+
 export async function getHumanColumns() {
   const sheets = await getSheetsClient();
 

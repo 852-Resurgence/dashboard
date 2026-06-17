@@ -1,5 +1,5 @@
 import { getDb } from '../db/client.js';
-import { fetchAllMembers, resolveRank } from '../services/discord.js';
+import { fetchAllMembers, resolveRank, memberDisplayName } from '../services/discord.js';
 import { getLevel } from '../services/levels.js';
 import { syncMembers, getHumanColumns } from '../services/sheets.js';
 import logger from '../logger.js';
@@ -42,10 +42,11 @@ export async function runMemberSync() {
 
       db.prepare(`
         INSERT INTO members (
-          discord_id, username, joined_at, rank, level, last_synced_at
-        ) VALUES (?, ?, ?, ?, ?, datetime('now'))
+          discord_id, username, display_name, joined_at, rank, level, last_synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
         ON CONFLICT(discord_id) DO UPDATE SET
           username       = excluded.username,
+          display_name   = excluded.display_name,
           joined_at      = excluded.joined_at,
           rank           = excluded.rank,
           level          = excluded.level,
@@ -53,6 +54,7 @@ export async function runMemberSync() {
       `).run(
         member.id,
         member.user.username,
+        memberDisplayName(member),
         member.joinedAt?.toISOString() ?? null,
         rank,
         level
