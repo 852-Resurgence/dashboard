@@ -53,7 +53,12 @@ async function main() {
   await new Promise(resolve => app.listen(env.port, resolve));
   logger.info(`Express listening on port ${env.port}`);
 
-  await startBot();
+  try {
+    await startBot();
+  } catch (err) {
+    logger.error(`Discord bot failed to start: ${err.message}`);
+  }
+
   connectConsoleWS();
   startWeeklySync();
 }

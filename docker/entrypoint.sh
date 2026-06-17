@@ -8,8 +8,8 @@ for dir in /app/data /app/logs; do
 done
 
 if [ -f /app/secrets/gsa-key.json ]; then
-  chown panel:panel /app/secrets/gsa-key.json
-  chmod 600 /app/secrets/gsa-key.json
+  chown panel:panel /app/secrets/gsa-key.json 2>/dev/null || true
+  chmod 600 /app/secrets/gsa-key.json 2>/dev/null || true
 fi
 
 exec su-exec panel "$@"

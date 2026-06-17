@@ -12,7 +12,7 @@ services:
     volumes:
       - ./src/backend:/app:delegated
       - /app/node_modules
-      - ./secrets:/app/secrets:ro
+      - ./secrets:/app/secrets
       - db:/app/data
       - logs:/app/logs
     ports:
