@@ -25,11 +25,16 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_COLOR_BRONZE: ${VITE_COLOR_BRONZE}
-        VITE_COLOR_SILVER: ${VITE_COLOR_SILVER}
-        VITE_COLOR_GOLD: ${VITE_COLOR_GOLD}
-        VITE_COLOR_DIAMOND: ${VITE_COLOR_DIAMOND}
+        VITE_COLOR_STAFF: ${VITE_COLOR_STAFF}
+        VITE_COLOR_LUMINARY: ${VITE_COLOR_LUMINARY}
+        VITE_COLOR_PRESTIGE: ${VITE_COLOR_PRESTIGE}
+        VITE_COLOR_VICE: ${VITE_COLOR_VICE}
+        VITE_COLOR_SENATOR: ${VITE_COLOR_SENATOR}
+        VITE_COLOR_DIGNITARY: ${VITE_COLOR_DIGNITARY}
+        VITE_COLOR_ATTACHE: ${VITE_COLOR_ATTACHE}
+        VITE_COLOR_CITIZEN: ${VITE_COLOR_CITIZEN}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_CRAFTY_URL: ${VITE_CRAFTY_URL}
     restart: unless-stopped
     volumes:
       - ./nginx/panel.conf:/etc/nginx/conf.d/panel.conf:ro

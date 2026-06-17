@@ -59,6 +59,7 @@ import client from '@/api/client'
 const logs        = ref([])
 const levelFilter = ref('all')
 const logBox      = ref(null)
+const uptime      = ref('—')
 
 const filtered = computed(() =>
   levelFilter.value === 'all'
@@ -68,17 +69,39 @@ const filtered = computed(() =>
 
 const errorCount = computed(() => logs.value.filter(e => e.level === 'error').length)
 
-// TODO: /api/health endpoint
-const uptime = ref('—')
-
 let pollTimer = null
+let healthTimer = null
 
 onMounted(async () => {
-  await fetchLogs()
+  await Promise.all([fetchLogs(), fetchHealth()])
   pollTimer = setInterval(fetchLogs, 5000)
+  healthTimer = setInterval(fetchHealth, 15000)
 })
 
-onUnmounted(() => clearInterval(pollTimer))
+onUnmounted(() => {
+  clearInterval(pollTimer)
+  clearInterval(healthTimer)
+})
+
+function formatUptime(ms) {
+  if (!ms) return '—'
+  const mins = Math.floor(ms / 60000)
+  const hours = Math.floor(mins / 60)
+  const days = Math.floor(hours / 24)
+  if (days > 0) return `${days}d ${hours % 24}h`
+  if (hours > 0) return `${hours}h ${mins % 60}m`
+  return `${mins}m`
+}
+
+async function fetchHealth() {
+  try {
+    const res = await fetch('/health', { credentials: 'include' })
+    const data = await res.json()
+    uptime.value = formatUptime(data.bot?.uptime)
+  } catch {
+    uptime.value = '—'
+  }
+}
 
 async function fetchLogs() {
   try {

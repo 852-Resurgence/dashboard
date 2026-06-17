@@ -79,7 +79,7 @@ onMounted(async () => {
   ])
 
   if (syncRes.status === 'fulfilled') {
-    memberCount.value = null // member count comes from sync status endpoint in future
+    memberCount.value = syncRes.value.data.member_count ?? null
     const d = new Date(syncRes.value.data.last_synced_at)
     lastSynced.value = isNaN(d) ? 'Never' : d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
   }

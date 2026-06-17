@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from './AppSidebar.vue'
@@ -36,7 +36,26 @@ defineProps({
 
 const router = useRouter()
 const auth   = useAuthStore()
-const botOnline = ref(true) // TODO: poll /api/health or a dedicated bot status endpoint
+const botOnline = ref(false)
+
+let healthTimer = null
+
+onMounted(async () => {
+  await pollHealth()
+  healthTimer = setInterval(pollHealth, 15000)
+})
+
+onUnmounted(() => clearInterval(healthTimer))
+
+async function pollHealth() {
+  try {
+    const res = await fetch('/health', { credentials: 'include' })
+    const data = await res.json()
+    botOnline.value = data.bot?.online ?? false
+  } catch {
+    botOnline.value = false
+  }
+}
 
 async function handleLogout() {
   await auth.logout()

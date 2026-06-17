@@ -72,13 +72,21 @@
 </template>
 
 <script setup>
-import { ref, defineAsyncComponent } from 'vue'
+import { ref, defineAsyncComponent, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import WarnBadge from '@/components/WarnBadge.vue'
 import WarningLevels from '@/components/WarningLevels.vue'
 import client from '@/api/client'
 
 const tab = ref('issue')
+const sheetsUrl = ref('https://sheets.google.com')
+
+onMounted(async () => {
+  try {
+    const res = await client.get('/api/config/sheets-urls')
+    if (res.data.warnings) sheetsUrl.value = res.data.warnings
+  } catch { /* use fallback */ }
+})
 
 // ── Issue form ────────────────────────────────────────────────
 const form = ref({ discord_id: '', username: '', level: '', reason: '' })
@@ -148,8 +156,7 @@ async function expire(warning) {
 }
 
 function openSheets(type) {
-  // TODO: Sheet URLs stored in env — for now open a generic link
-  window.open('https://sheets.google.com', '_blank')
+  window.open(sheetsUrl.value, '_blank')
 }
 
 function onAddLevel()  {}

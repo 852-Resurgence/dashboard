@@ -70,10 +70,17 @@ router.post('/api/members/sync', requireRole('admin'), async (req, res) => {
 
 // GET /api/members/sync/status
 router.get('/api/members/sync/status', (req, res) => {
-  const latest = getDb()
+  const db = getDb();
+  const latest = db
     .prepare(`SELECT MAX(last_synced_at) AS last_synced_at FROM members`)
     .get();
-  res.json({ last_synced_at: latest?.last_synced_at ?? null });
+  const count = db
+    .prepare(`SELECT COUNT(*) AS count FROM members`)
+    .get();
+  res.json({
+    last_synced_at: latest?.last_synced_at ?? null,
+    member_count: count?.count ?? 0,
+  });
 });
 
 export default router;

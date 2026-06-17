@@ -26,8 +26,11 @@ export const env = {
       mod:   require('DISCORD_ROLE_MOD'),
     },
     channels: {
-      modLog:  require('DISCORD_MOD_LOG_CHANNEL'),
-      levelUp: require('DISCORD_LEVELUP_CHANNEL'),
+      modLog:       require('DISCORD_MOD_LOG_CHANNEL'),
+      levelUp:      require('DISCORD_LEVELUP_CHANNEL'),
+      intro:        require('DISCORD_INTRO_CHANNEL'),
+      ventApproval: require('DISCORD_VENT_APPROVAL_CHANNEL'),
+      ventPosts:    require('DISCORD_VENT_POSTS_CHANNEL'),
     },
   },
 
@@ -63,6 +66,8 @@ export const env = {
     saKeyPath:   require('GOOGLE_SA_KEY_PATH'),
     warningsId:  require('SHEETS_WARNINGS_ID'),
     membersId:   require('SHEETS_MEMBERS_ID'),
+    warningsUrl: `https://docs.google.com/spreadsheets/d/${require('SHEETS_WARNINGS_ID')}`,
+    membersUrl:  `https://docs.google.com/spreadsheets/d/${require('SHEETS_MEMBERS_ID')}`,
   },
 
   // crafty

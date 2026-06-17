@@ -68,10 +68,15 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           # Vite rank colours injected at build time from repo secrets
           build-args: |
-            VITE_COLOR_BRONZE=${{ secrets.VITE_COLOR_BRONZE }}
-            VITE_COLOR_SILVER=${{ secrets.VITE_COLOR_SILVER }}
-            VITE_COLOR_GOLD=${{ secrets.VITE_COLOR_GOLD }}
-            VITE_COLOR_DIAMOND=${{ secrets.VITE_COLOR_DIAMOND }}
+            VITE_COLOR_STAFF=${{ secrets.VITE_COLOR_STAFF }}
+            VITE_COLOR_LUMINARY=${{ secrets.VITE_COLOR_LUMINARY }}
+            VITE_COLOR_PRESTIGE=${{ secrets.VITE_COLOR_PRESTIGE }}
+            VITE_COLOR_VICE=${{ secrets.VITE_COLOR_VICE }}
+            VITE_COLOR_SENATOR=${{ secrets.VITE_COLOR_SENATOR }}
+            VITE_COLOR_DIGNITARY=${{ secrets.VITE_COLOR_DIGNITARY }}
+            VITE_COLOR_ATTACHE=${{ secrets.VITE_COLOR_ATTACHE }}
+            VITE_COLOR_CITIZEN=${{ secrets.VITE_COLOR_CITIZEN }}
             VITE_API_BASE_URL=
+            VITE_CRAFTY_URL=${{ secrets.VITE_CRAFTY_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

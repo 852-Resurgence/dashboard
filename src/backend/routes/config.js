@@ -3,6 +3,7 @@ import { getDb } from '../db/client.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
 import logger from '../logger.js';
+import env from '../config/env.js';
 
 const router = Router();
 
@@ -169,6 +170,13 @@ router.delete('/api/config/roles/:roleId', requireRole('admin'), (req, res) => {
   if (!result.changes) return res.status(404).json({ error: 'Role not found' });
   logger.info(`Role mapping removed: ${req.params.roleId} by ${req.user.username}`);
   res.json({ ok: true });
+});
+
+router.get('/api/config/sheets-urls', (req, res) => {
+  res.json({
+    warnings: env.sheets.warningsUrl,
+    members:  env.sheets.membersUrl,
+  });
 });
 
 router.get('/api/config/setup-status', (req, res) => {

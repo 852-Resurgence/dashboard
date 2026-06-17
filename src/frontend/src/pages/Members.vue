@@ -136,19 +136,20 @@ const syncing    = ref(false)
 const search     = ref('')
 const totalCount = ref(0)
 const lastSynced = ref('—')
+const sheetsUrl  = ref('https://sheets.google.com')
 
 let searchTimer = null
 
 onMounted(async () => {
-  await Promise.all([loadMembers(), loadSyncStatus()])
+  await Promise.all([loadMembers(), loadSyncStatus(), loadSheetsUrl()])
 })
 
 async function loadMembers(q = '') {
   loading.value = true
   try {
     const res = await client.get('/api/members', { params: q ? { search: q } : {} })
-    members.value  = res.data
-    totalCount.value = res.data.length
+    members.value = res.data
+    if (!q) totalCount.value = res.data.length
   } finally {
     loading.value = false
   }
@@ -156,8 +157,16 @@ async function loadMembers(q = '') {
 
 async function loadSyncStatus() {
   const res = await client.get('/api/members/sync/status')
+  totalCount.value = res.data.member_count ?? 0
   const d = new Date(res.data.last_synced_at)
   lastSynced.value = isNaN(d) ? 'Never' : d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+}
+
+async function loadSheetsUrl() {
+  try {
+    const res = await client.get('/api/config/sheets-urls')
+    if (res.data.members) sheetsUrl.value = res.data.members
+  } catch { /* use fallback */ }
 }
 
 function debouncedSearch() {
@@ -177,8 +186,7 @@ async function syncNow() {
 }
 
 function openSheets() {
-  window.open('https://sheets.google.com', '_blank')
-  // TODO: actual link
+  window.open(sheetsUrl.value, '_blank')
 }
 
 function rankRowStyle(rank) {

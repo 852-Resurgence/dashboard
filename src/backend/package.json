@@ -1,0 +1,25 @@
+{
+  "name": "852r-panel-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "nodemon start.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "axios-cookiejar-support": "^5.0.2",
+    "better-sqlite3": "^11.0.0",
+    "cookie-parser": "^1.4.6",
+    "discord.js": "^14.15.3",
+    "express": "^4.19.2",
+    "googleapis": "^140.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "tough-cookie": "^4.1.4",
+    "winston": "^3.13.0",
+    "ws": "^8.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

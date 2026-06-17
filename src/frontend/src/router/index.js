@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import client from '@/api/client'
 
 import Login     from '@/pages/Login.vue'
+import Setup     from '@/pages/Setup.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Warnings  from '@/pages/Warnings.vue'
 import Members   from '@/pages/Members.vue'
@@ -11,6 +13,7 @@ import Wiki      from '@/pages/Wiki.vue'
 
 const routes = [
   { path: '/login', component: Login, meta: { public: true } },
+  { path: '/setup', component: Setup, meta: { title: 'Setup', adminOnly: true, skipSetupCheck: true } },
   { path: '/',         component: Dashboard, meta: { title: 'Dashboard' } },
   { path: '/warnings', component: Warnings,  meta: { title: 'Warnings' } },
   { path: '/members',  component: Members,   meta: { title: 'Member list' } },
@@ -25,6 +28,15 @@ const router = createRouter({
   routes,
 })
 
+async function fetchSetupStatus() {
+  try {
+    const res = await client.get('/api/config/setup-status')
+    return res.data
+  } catch {
+    return { complete: true }
+  }
+}
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
@@ -34,7 +46,22 @@ router.beforeEach(async (to) => {
     return { path: '/login' }
   }
 
+  if (to.meta.adminOnly && auth.isAuthenticated && !auth.isAdmin) {
+    return { path: '/' }
+  }
+
+  const setup = auth.isAdmin ? await fetchSetupStatus() : { complete: true }
+
+  if (auth.isAuthenticated && auth.isAdmin && !setup.complete && !to.meta.skipSetupCheck) {
+    return { path: '/setup' }
+  }
+
+  if (to.path === '/setup' && setup.complete) {
+    return { path: '/' }
+  }
+
   if (to.path === '/login' && auth.isAuthenticated) {
+    if (auth.isAdmin && !setup.complete) return { path: '/setup' }
     return { path: '/' }
   }
 })

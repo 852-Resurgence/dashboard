@@ -1,5 +1,5 @@
 import { getDb } from '../../db/client.js';
-import { resolveRank } from '../../services/discord.js';
+import { resolveRank, dmUser } from '../../services/discord.js';
 import { getLevel } from '../../services/levels.js';
 import logger from '../../logger.js';
 
@@ -26,6 +26,11 @@ export default async function guildMemberAdd(member) {
       rank,
       level
     );
+
+  await dmUser(
+    member.id,
+    'Welcome to **852 Resurgence**! Please read the server rules and post your introduction in the introductions channel (minimum 160 characters) to receive the Citizen role.'
+  );
 
   logger.info(`New member joined and cached: ${member.user.username} (${member.id})`);
 }

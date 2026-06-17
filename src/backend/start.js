@@ -9,7 +9,8 @@ import env from './config/env.js';
 import authRouter     from './routes/auth.js';
 import warningsRouter from './routes/warnings.js';
 import membersRouter  from './routes/members.js';
-import consoleRouter  from './routes/console.js';
+import craftyRouter   from './routes/crafty.js';
+import { getBotStatus } from './bot.js';
 import botlogsRouter  from './routes/botlogs.js';
 import wikiRouter     from './routes/wiki.js';
 import configRouter   from './routes/config.js';
@@ -25,12 +26,22 @@ async function main() {
   app.use(express.json());
   app.use(cookieParser());
 
-  app.get('/health', (req, res) => res.json({ ok: true }));
+  app.get('/health', (req, res) => {
+    const bot = getBotStatus();
+    res.json({
+      ok: true,
+      bot: {
+        online: bot.online,
+        uptime: bot.uptime,
+        tag: bot.tag,
+      },
+    });
+  });
 
   app.use(authRouter);
   app.use(warningsRouter);
   app.use(membersRouter);
-  app.use(consoleRouter);
+  app.use(craftyRouter);
   app.use(botlogsRouter);
   app.use(wikiRouter);
   app.use(configRouter);
