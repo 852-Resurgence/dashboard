@@ -226,16 +226,20 @@ onMounted(async () => {
 
 async function loadMembers(q = '') {
   loading.value = true
+  saveError.value = ''
   try {
     const params = { summary: 1 }
     if (q) params.search = q
     const res = await client.get('/api/members', { params })
-    members.value = res.data
-    if (!q) totalCount.value = res.data.length
+    members.value = Array.isArray(res.data) ? res.data : []
+    if (!q) totalCount.value = members.value.length
 
     if (selectedId.value && !members.value.some(m => m.discord_id === selectedId.value)) {
       closeDetail()
     }
+  } catch (err) {
+    members.value = []
+    saveError.value = err.response?.data?.error || 'Failed to load members'
   } finally {
     loading.value = false
   }

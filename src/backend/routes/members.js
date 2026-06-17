@@ -27,7 +27,7 @@ router.get('/api/members', (req, res) => {
 
   const memberCols = listOnly
     ? `m.discord_id, m.username, m.display_name, m.joined_at, m.rank,
-       m.current_warning_id, m.prior_warnings, m.active_restrictions,
+       m.current_warning_id, m.active_restrictions,
        CASE WHEN COALESCE(m.aliases, '') != '' THEN 1 ELSE 0 END AS has_aliases,
        CASE WHEN COALESCE(m.notes, '') != '' THEN 1 ELSE 0 END AS has_notes`
     : 'm.*';
@@ -69,8 +69,42 @@ router.get('/api/members', (req, res) => {
              COALESCE(m.display_name, m.username) COLLATE NOCASE ASC
   `;
 
-  const members = getDb().prepare(query).all(...params);
-  res.json(members);
+  try {
+    const members = getDb().prepare(query).all(...params);
+    res.json(members);
+  } catch (err) {
+    logger.error(`GET /api/members failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to load members' });
+  }
+});
+
+// GET /api/members/sync/status — before /:discordId so "sync" is not treated as an ID
+router.get('/api/members/sync/status', (req, res) => {
+  const db = getDb();
+  const latest = db
+    .prepare(`SELECT MAX(last_synced_at) AS last_synced_at FROM members`)
+    .get();
+  const count = db
+    .prepare(`SELECT COUNT(*) AS count FROM members`)
+    .get();
+  res.json({
+    last_synced_at: latest?.last_synced_at ?? null,
+    member_count: count?.count ?? 0,
+  });
+});
+
+// POST /api/members/sync
+router.post('/api/members/sync', requireRole('admin'), async (req, res) => {
+  // late import to prevent circular deps 
+  const { runMemberSync } = await import('../jobs/weeklySync.js');
+
+  try {
+    res.json({ ok: true, message: 'Sync started' });
+    const count = await runMemberSync();
+    logger.info(`On-demand member sync complete — ${count} members`);
+  } catch (err) {
+    logger.error(`On-demand member sync failed: ${err.message}`);
+  }
 });
 
 // GET /api/members/:discordId — full record including aliases/notes
@@ -127,35 +161,6 @@ router.patch('/api/members/:discordId', requireRole('mod'), async (req, res) => 
 
   logger.info(`Member ${discordId} aliases/notes updated by ${req.user.username}`);
   res.json({ ...updated, sheets_synced: sheetsSynced, sheets_error: sheetsError });
-});
-
-// POST /api/members/sync
-router.post('/api/members/sync', requireRole('admin'), async (req, res) => {
-  // late import to prevent circular deps 
-  const { runMemberSync } = await import('../jobs/weeklySync.js');
-
-  try {
-    res.json({ ok: true, message: 'Sync started' });
-    const count = await runMemberSync();
-    logger.info(`On-demand member sync complete — ${count} members`);
-  } catch (err) {
-    logger.error(`On-demand member sync failed: ${err.message}`);
-  }
-});
-
-// GET /api/members/sync/status
-router.get('/api/members/sync/status', (req, res) => {
-  const db = getDb();
-  const latest = db
-    .prepare(`SELECT MAX(last_synced_at) AS last_synced_at FROM members`)
-    .get();
-  const count = db
-    .prepare(`SELECT COUNT(*) AS count FROM members`)
-    .get();
-  res.json({
-    last_synced_at: latest?.last_synced_at ?? null,
-    member_count: count?.count ?? 0,
-  });
 });
 
 export default router;
