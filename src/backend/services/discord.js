@@ -21,7 +21,10 @@ export async function fetchMember(discordId) {
 }
 
 export async function fetchAllMembers() {
-  return guild().members.fetch();
+  const g = guild();
+  // Force refresh so globalName / nicknames are current (stale cache left display_name empty)
+  await g.members.fetch({ force: true });
+  return g.members.cache;
 }
 
 export async function dmUser(discordId, message) {
@@ -191,7 +194,8 @@ export function resolveRank(roleIds) {
   return null;
 }
 
-/** Server nickname, else Discord display name, else username handle. */
+/** Server nickname, else Discord global display name, else @username handle. */
 export function memberDisplayName(member) {
-  return member.displayName || member.user.globalName || member.user.username;
+  if (!member?.user) return '';
+  return (member.displayName || member.user.globalName || member.user.username).trim();
 }

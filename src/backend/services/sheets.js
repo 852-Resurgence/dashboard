@@ -182,7 +182,7 @@ export async function syncMembers(members) {
     const rows = members.map((m, i) => [
       i + 2,
       m.discord_id,
-      m.username,
+      m.display_name || m.username,
       m.joined_at || '',
       m.rank || '',
       m.level ?? '',

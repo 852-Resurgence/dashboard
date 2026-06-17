@@ -1,6 +1,6 @@
 import { getDb } from '../db/client.js';
-import { fetchAllMembers, resolveRank, memberDisplayName } from '../services/discord.js';
-import { getLevel } from '../services/levels.js';
+import { fetchAllMembers, memberDisplayName } from '../services/discord.js';
+import { upsertMemberFromGuildMember } from '../services/memberCache.js';
 import { syncMembers, getHumanColumns } from '../services/sheets.js';
 import logger from '../logger.js';
 
@@ -20,9 +20,7 @@ export async function runMemberSync() {
     for (const member of guildMembers.values()) {
       if (member.user.bot) continue;
 
-      const roleIds = [...member.roles.cache.keys()];
-      const rank = resolveRank(roleIds);
-      const level = getLevel(member.id);
+      const { rank, level } = upsertMemberFromGuildMember(member);
 
       const activeWarning = db.prepare(`
         SELECT level FROM warnings
@@ -40,29 +38,10 @@ export async function runMemberSync() {
         SELECT active_restrictions FROM members WHERE discord_id = ?
       `).get(member.id);
 
-      db.prepare(`
-        INSERT INTO members (
-          discord_id, username, display_name, joined_at, rank, level, last_synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-        ON CONFLICT(discord_id) DO UPDATE SET
-          username       = excluded.username,
-          display_name   = excluded.display_name,
-          joined_at      = excluded.joined_at,
-          rank           = excluded.rank,
-          level          = excluded.level,
-          last_synced_at = excluded.last_synced_at
-      `).run(
-        member.id,
-        member.user.username,
-        memberDisplayName(member),
-        member.joinedAt?.toISOString() ?? null,
-        rank,
-        level
-      );
-
       rows.push({
         discord_id: member.id,
         username: member.user.username,
+        display_name: memberDisplayName(member),
         joined_at: member.joinedAt?.toISOString() ?? '',
         rank: rank ?? '',
         level: level ?? '',
