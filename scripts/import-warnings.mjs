@@ -276,22 +276,37 @@ function lookup(map, key) {
   return map.get(normalize(key)) ?? [];
 }
 
+function memberLabel(member) {
+  return member.display_name || member.username || '';
+}
+
 function matchMember(names, indexes) {
+  const allMembers = uniqueByDiscordId([].concat(...[...indexes.byUsername.values()].flat()));
+
   for (const name of names) {
+    const target = normalize(name);
     const tiers = [
-      { method: 'exact_username', candidates: () => lookup(indexes.byUsername, name) },
       { method: 'exact_display_name', candidates: () => lookup(indexes.byDisplayName, name) },
       { method: 'name_in_member_aliases', candidates: () => lookup(indexes.byAliasToken, name) },
+      { method: 'exact_username', candidates: () => lookup(indexes.byUsername, name) },
+      {
+        method: 'fuzzy_display_name',
+        candidates: () => {
+          if (!target) return [];
+          return allMembers.filter(m => {
+            const d = normalize(m.display_name);
+            return d && levenshtein(target, d) <= 2;
+          });
+        },
+      },
       {
         method: 'fuzzy_username',
         candidates: () => {
-          const target = normalize(name);
           if (!target) return [];
-          return uniqueByDiscordId([].concat(...[...indexes.byUsername.values()].flat()))
-            .filter(m => {
-              const u = normalize(m.username);
-              return u && levenshtein(target, u) <= 2;
-            });
+          return allMembers.filter(m => {
+            const u = normalize(m.username);
+            return u && levenshtein(target, u) <= 2;
+          });
         },
       },
     ];
@@ -376,7 +391,7 @@ async function applyWarning(row, member, panelLevel, issuedAt, expiresAt, expire
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     member.discord_id,
-    member.username,
+    memberLabel(member),
     panelLevel,
     reason,
     LEGACY_ISSUER_ID,
@@ -396,7 +411,7 @@ async function applyWarning(row, member, panelLevel, issuedAt, expiresAt, expire
   } catch (err) {
     sheetsOk = false;
     sheetsError = err.message;
-    console.warn(`  Sheets skip warning ${warning.id} (${member.username}): ${err.message}`);
+    console.warn(`  Sheets skip warning ${warning.id} (${memberLabel(member)}): ${err.message}`);
   }
 
   return { dbOk: true, sheetsOk, warningId: warning.id, reason, sheetsError };
@@ -496,6 +511,7 @@ async function main() {
         csv_start: row.startRaw,
         csv_end: row.endRaw,
         discord_id: result.member.discord_id,
+        matched_display_name: memberLabel(result.member),
         matched_username: result.member.username,
         match_method: result.method,
         expired,
@@ -526,7 +542,7 @@ async function main() {
   const prefix = join(logDir, 'warning-import');
   writeReportCsv(`${prefix}-matched.csv`, [
     'csv_identity', 'csv_level', 'panel_level', 'csv_reason', 'csv_start', 'csv_end',
-    'discord_id', 'matched_username', 'match_method', 'expired', 'warning_id', 'sheets_ok', 'sheets_error',
+    'discord_id', 'matched_display_name', 'matched_username', 'match_method', 'expired', 'warning_id', 'sheets_ok', 'sheets_error',
   ], matched);
 
   writeReportCsv(`${prefix}-unmatched.csv`, [
