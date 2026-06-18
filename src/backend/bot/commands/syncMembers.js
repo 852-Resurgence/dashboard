@@ -5,7 +5,9 @@ import logger from '../../logger.js';
 
 export const data = new SlashCommandBuilder()
   .setName('syncmembers')
-  .setDescription('Trigger an immediate member list sync to Google Sheets (admin only)');
+  .setDescription('Trigger an immediate member list sync to Google Sheets (admin only)')
+  // Hidden from everyone by default; guild role permissions grant admin access on register
+  .setDefaultMemberPermissions(0);
 
 export async function execute(interaction) {
   const roleIds = [...interaction.member.roles.cache.keys()];

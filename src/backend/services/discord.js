@@ -176,6 +176,25 @@ export function resolvePermission(roleIds) {
   }
 }
 
+/** Discord role IDs allowed to see/use staff slash commands (matches resolvePermission). */
+export function getPanelRoleIds(minimumRole = 'mod') {
+  const ids = new Set();
+  if (env.discord.roles.admin) ids.add(env.discord.roles.admin);
+  if (minimumRole === 'mod' && env.discord.roles.mod) ids.add(env.discord.roles.mod);
+
+  try {
+    const rows = getDb().prepare('SELECT role_id, permission FROM role_permissions').all();
+    for (const row of rows) {
+      if (row.permission === 'admin') ids.add(row.role_id);
+      else if (minimumRole === 'mod' && row.permission === 'mod') ids.add(row.role_id);
+    }
+  } catch {
+    /* DB may not be ready during early startup */
+  }
+
+  return [...ids];
+}
+
 // Returns the rank name for a given set of Discord role IDs
 export function resolveRank(roleIds) {
   const rankMap = [

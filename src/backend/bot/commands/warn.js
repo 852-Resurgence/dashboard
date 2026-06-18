@@ -24,7 +24,9 @@ export const data = new SlashCommandBuilder()
   )
   .addStringOption(opt =>
     opt.setName('reason').setDescription('Reason for the warning').setRequired(true)
-  );
+  )
+  // Hidden from everyone by default; guild role permissions grant mod/admin access on register
+  .setDefaultMemberPermissions(0);
 
 export async function execute(interaction) {
   // Permission check — mod or admin only
