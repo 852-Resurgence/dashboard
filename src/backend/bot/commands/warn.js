@@ -5,6 +5,12 @@ import { appendWarning } from '../../services/sheets.js';
 import { executeWarningAction } from '../../services/warnings.js';
 import logger from '../../logger.js';
 
+/** Discord role permissions that gate /warn visibility (any one is enough). */
+export const WARN_COMMAND_PERMISSIONS =
+  PermissionFlagsBits.KickMembers |
+  PermissionFlagsBits.BanMembers |
+  PermissionFlagsBits.ModerateMembers;
+
 export const data = new SlashCommandBuilder()
   .setName('warn')
   .setDescription('Issue a warning to a member')
@@ -25,8 +31,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption(opt =>
     opt.setName('reason').setDescription('Reason for the warning').setRequired(true)
   )
-  // Visible to members with Moderate Members; panel mod/admin roles also granted on bot startup
-  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
+  // Visible if role has Kick, Ban, or Time out members (ModerateMembers) in Discord role settings
+  .setDefaultMemberPermissions(WARN_COMMAND_PERMISSIONS);
 
 export async function execute(interaction) {
   // Permission check — mod or admin only
