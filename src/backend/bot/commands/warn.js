@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
 import { getDb } from '../../db/client.js';
 import { resolvePermission } from '../../services/discord.js';
 import { appendWarning } from '../../services/sheets.js';
@@ -25,8 +25,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption(opt =>
     opt.setName('reason').setDescription('Reason for the warning').setRequired(true)
   )
-  // Hidden from everyone by default; guild role permissions grant mod/admin access on register
-  .setDefaultMemberPermissions(0);
+  // Visible to members with Moderate Members; panel mod/admin roles also granted on bot startup
+  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
 
 export async function execute(interaction) {
   // Permission check — mod or admin only

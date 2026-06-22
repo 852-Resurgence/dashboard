@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { resolvePermission } from '../../services/discord.js';
 import { runMemberSync } from '../../jobs/weeklySync.js';
 import logger from '../../logger.js';
@@ -6,8 +6,8 @@ import logger from '../../logger.js';
 export const data = new SlashCommandBuilder()
   .setName('syncmembers')
   .setDescription('Trigger an immediate member list sync to Google Sheets (admin only)')
-  // Hidden from everyone by default; guild role permissions grant admin access on register
-  .setDefaultMemberPermissions(0);
+  // Visible to members with Administrator; panel admin roles also granted on bot startup
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction) {
   const roleIds = [...interaction.member.roles.cache.keys()];
