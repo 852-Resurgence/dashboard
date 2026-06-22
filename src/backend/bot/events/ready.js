@@ -29,6 +29,7 @@ function debugLog(hypothesisId, location, message, data = {}) {
     appendFileSync(join(process.env.LOG_DIR || join(__dirname, '../../logs'), 'debug-e132f4.log'), `${entry}\n`);
   } catch { /* ignore */ }
   // #endregion
+  logger.info(`[DEBUG-e132f4] ${message} ${JSON.stringify(data)}`);
 }
 
 // This event fires exactly once when the bot connects
@@ -79,9 +80,45 @@ async function registerSlashCommands(client) {
       commandId: warnRegistered?.id ?? null,
       default_member_permissions: warnRegistered?.default_member_permissions ?? null,
     });
+    if (warnRegistered) await clearWarnGuildPermissions(rest, warnRegistered);
     await applyStaffCommandPermissions(rest, registered);
   } catch (err) {
     logger.error(`Failed to register slash commands: ${err.message}`);
+  }
+}
+
+/** Remove stale guild overwrites (e.g. old @everyone deny) so default_member_permissions applies. */
+async function clearWarnGuildPermissions(rest, warnCmd) {
+  try {
+    const before = await rest.get(
+      Routes.applicationCommandPermissions(env.discord.clientId, env.discord.guildId, warnCmd.id)
+    );
+    debugLog('H2', 'ready.js:clearWarnGuildPermissions', 'warn overwrites before clear', {
+      permissionCount: before.permissions?.length ?? 0,
+    });
+
+    await rest.put(
+      Routes.applicationCommandPermissions(
+        env.discord.clientId,
+        env.discord.guildId,
+        warnCmd.id
+      ),
+      { body: { permissions: [] } }
+    );
+
+    const after = await rest.get(
+      Routes.applicationCommandPermissions(env.discord.clientId, env.discord.guildId, warnCmd.id)
+    );
+    debugLog('H2', 'ready.js:clearWarnGuildPermissions', 'warn overwrites after clear', {
+      permissionCount: after.permissions?.length ?? 0,
+      default_member_permissions: warnCmd.default_member_permissions ?? null,
+    });
+  } catch (err) {
+    debugLog('H5', 'ready.js:clearWarnGuildPermissions', 'failed to clear warn overwrites', {
+      error: err.message,
+      rawError: err.rawError?.message ?? null,
+      code: err.code ?? null,
+    });
   }
 }
 
