@@ -10,6 +10,10 @@ import {
 } from './discord.js';
 import logger from '../logger.js';
 
+export function formatWarningDm(warning) {
+  return `You have been given a (Level ${warning.level}) warning in 852 Resurgence for reason:\n${warning.reason}`;
+}
+
 export async function executeWarningAction(warning, config) {
   const db = getDb();
 
@@ -18,12 +22,11 @@ export async function executeWarningAction(warning, config) {
     WHERE discord_id = ?
   `).run(warning.id, warning.discord_id);
 
-  if (config.send_dm) {
-    await dmUser(
-      warning.discord_id,
-      `You have received a **Level ${warning.level}** warning on 852 Resurgence.\n\n**Reason:** ${warning.reason}`
-    );
-  }
+  const dmText = formatWarningDm(warning);
+  await dmUser(warning.discord_id, dmText);
+  logger.info(
+    `Warning DM to ${warning.username} (${warning.discord_id}): Level ${warning.level} — ${warning.reason}`
+  );
 
   if (config.post_mod_log) {
     const embed = new EmbedBuilder()
